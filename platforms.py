@@ -29,33 +29,24 @@ platform_images = {
 
 # ======================== PARTIE 2.1 ========================
 def create_platform(x, y, platform_type="green"):
-    """
-    Crée et retourne un dictionnaire représentant une plateforme.
+    height = PLATFORM_SIZE[1]
+    vx = 0.0
 
-    Le dictionnaire ci-dessous représente pour l'instant correctement une
-    plateforme verte. Votre travail consiste à le généraliser afin qu'il
-    représente aussi correctement les plateformes bleues, marron et à ressort.
-    """
+    if platform_type == "spring":
+        height = PLATFORM_SIZE[1] + 10
+    elif platform_type == "blue":
+        vx = MOVING_PLATFORM_SPEED
 
     platform = {
         "x": float(x),
         "y": float(y),
-        "type": "green",                    # TODO
-        "image": platform_images["green"],  # TODO
-        "vx": 0.0,                          # TODO
+        "type": platform_type,
+        "image": platform_images[platform_type],
+        "vx": vx,
         "active": True,
         "width": PLATFORM_SIZE[0],
-        "height": PLATFORM_SIZE[1]           # TODO
+        "height": height
     }
-
-    # TODO : Modifiez le dictionnaire ci-dessus pour qu'il dépende réellement
-    # de l'argument platform_type.
-    #
-    # Contraintes :
-    # - l'image doit être obtenue à partir de platform_images ;
-    # - une plateforme bleue se déplace à MOVING_PLATFORM_SPEED ;
-    # - une plateforme à ressort est 10 pixels plus haute ;
-    # - les autres plateformes sont immobiles et gardent la hauteur normale.
 
     return platform
 
@@ -71,15 +62,14 @@ def choose_platform_type(green_probability, blue_probability, spring_probability
     verte, bleue et à ressort. La probabilité restante correspond à une
     plateforme marron.
     """
-
-    # TODO : Utilisez random.random() et les probabilités reçues en paramètres
-    # pour retourner l'une des chaînes suivantes :
-    # "green", "blue", "spring" ou "brown".
-    #
-    # Attention : les seuils utilisés avec random.random() doivent être
-    # cumulatifs.
-
-    return "green"  # Valeur temporaire à remplacer
+    r = random.random()
+    if r < green_probability:
+        return "green"
+    elif r < green_probability + blue_probability:
+        return "blue"
+    elif r < green_probability + blue_probability + spring_probability:
+        return "spring"
+    return "brown"
 
 # ===========================================================
 
