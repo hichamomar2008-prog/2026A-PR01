@@ -19,8 +19,11 @@ def apply_gravity():
     Applique la gravité au Doodle en augmentant progressivement sa vitesse verticale (vel_y).
     Met à jour la position verticale (y) du Doodle.
     """
-    # TODO : Mettez à jour la vitesse verticale puis la position verticale
-    # du Doodle à partir de GRAVITY.
+    # 1. On augmente la vitesse verticale du Doodle avec la gravité
+    doodle_dict["vy"] += GRAVITY
+
+    # 2. On met à jour la position Y selon cette vitesse
+    doodle_dict["y"] += doodle_dict["vy"]
 
     return
 
@@ -38,7 +41,7 @@ def move_doodle():
     # TODO : Gérez les déplacements gauche/droite et mettez à jour
     # simultanément la direction et l'image du Doodle.
 
-
+ 
 
     # TODO : Implémentez le Screen Wrap pour qu'une partie du Doodle puisse
     # sortir d'un côté avant de réapparaître de l'autre.
@@ -57,10 +60,22 @@ def move_platforms():
     Déplace horizontalement les plateformes mobiles ("blue").
     Fait rebondir les plateformes lorsqu'elles atteignent les bords de la fenêtre.
     """
-    # TODO : Parcourez les plateformes et gérez le déplacement des plateformes
-    # bleues encore actives. Elles doivent rester dans la fenêtre en inversant
-    # leur vitesse lorsqu'elles atteignent un bord.
-
+    
+    for plat in PLATFORMS:
+        # 1. On filtre : seules les plateformes bleues bougent
+        if plat["type"] == "blue":
+            # 2. Mise à jour de la position horizontale
+            plat["x"] += plat["vx"]
+            
+            # 3. Collision avec le bord gauche
+            if plat["x"] <= 0:
+                plat["x"] = 0
+                plat["vx"] = -plat["vx"]  # Inverse la direction
+                
+            # 4. Collision avec le bord droit
+            elif plat["x"] + plat["width"] >= SCREEN_WIDTH:
+                plat["x"] = SCREEN_WIDTH - plat["width"]
+                plat["vx"] = -plat["vx"]  
     return
 
 # ===========================================================
@@ -73,7 +88,44 @@ def check_platform_collisions():
     Le rebond ne se produit QUE lorsque le Doodle descend (vel_y > 0)
     et qu'il arrive sur le dessus d'une plateforme.
     """
-    # TODO : Implémentez la détection d'un atterrissage.
+    # 1. Le Doodle ne peut rebondir QUE s'il descend
+    if doodle_dict["vy"] <= 0:
+        return
+
+    # Dimensions du Doodle pour construire son rectangle
+    doodle_rect = (
+        doodle_dict["x"],
+        doodle_dict["y"],
+        DOODLE_WIDTH,
+        DOODLE_HEIGHT
+    )
+
+    for plat in PLATFORMS:
+        # Seules les plateformes actives sont prises en compte
+        if not plat["active"]:
+            continue
+
+        plat_rect = (plat["x"], plat["y"], plat["width"], plat["height"])
+
+        # Test 1 : Chevauchement des deux rectangles
+        if rects_collide(doodle_rect, plat_rect):
+            # Position des pieds du Doodle à l'image précédente (y_précédent = y_actuel - vy)
+            previous_feet_y = (doodle_dict["y"] - doodle_dict["vy"]) + DOODLE_HEIGHT
+
+            # Test 2 : Les pieds étaient bien au-dessus (ou au niveau) du haut de la plateforme
+            if previous_feet_y <= plat["y"] + 14:
+                
+                # Gestion selon le type de plateforme
+                if plat["type"] == "spring":
+                    doodle_dict["vy"] = SPRING_JUMP_VELOCITY
+                elif plat["type"] == "brown":
+                    doodle_dict["vy"] = JUMP_VELOCITY
+                    plat["active"] = False  # La plateforme marron se casse/s'inactive
+                else:  # "green" ou "blue"
+                    doodle_dict["vy"] = JUMP_VELOCITY
+
+                # Un seul rebond doit être traité à la fois
+                break 
     #
     # Contraintes :
     # - aucun rebond pendant la montée ;
@@ -98,14 +150,34 @@ def scroll_camera():
     Fait défiler le monde lorsque le Doodle dépasse CAMERA_SCROLL_THRESHOLD.
     Met à jour le score et maintient les plateformes visibles.
     """
-    # TODO : Lorsque le Doodle dépasse le seuil de caméra, il doit rester
-    # visuellement au seuil pendant que les plateformes sont déplacées vers
-    # le bas de la même distance.
-    #
-    # Le score doit représenter la distance verticale ainsi parcourue et le
-    # meilleur score doit être mis à jour. Les plateformes sorties sous
-    # l'écran doivent être retirées, puis de nouvelles plateformes générées.
+    # 1. Vérifie si le Doodle a dépassé le seuil de la caméra vers le haut
+    if doodle_dict["y"] < CAMERA_SCROLL_THRESHOLD:
+        scroll_amount = CAMERA_SCROLL_THRESHOLD - doodle_dict["y"]
 
+        # 2. On recentre le Doodle au niveau du seuil
+        doodle_dict["y"] = CAMERA_SCROLL_THRESHOLD
+
+        # 3. On décale toutes les plateformes vers le bas
+        for plat in PLATFORMS:
+            plat["y"] += scroll_amount
+
+        # 4. On augmente le score selon la distance parcourue
+        doodle_dict["score"] += int(scroll_amount)
+
+        # 5. Mise à jour du high score si nécessaire
+        if doodle_dict["score"] > doodle_dict["high_score"]:
+            doodle_dict["high_score"] = doodle_dict["score"]
+
+        # 6. Suppression des plateformes sorties par le bas de l'écran
+        i = 0
+        while i < len(PLATFORMS):
+            if PLATFORMS[i]["y"] > SCREEN_HEIGHT:
+                PLATFORMS.pop(i)
+            else:
+                i += 1
+
+        # 7. Génération de nouvelles plateformes en haut
+        generate_new_platforms()
     return
 
 # ===========================================================
@@ -117,12 +189,29 @@ def generate_new_platforms():
     Génère de nouvelles plateformes au-dessus du haut de l'écran pour maintenir
     un flux continu lorsque la caméra défile.
     """
-    # TODO : Complétez cette fonction en vous inspirant de la logique de
-    # génération initiale, sans la recopier inutilement.
-    #
-    # Vous devrez partir de la plateforme actuellement la plus haute et
-    # continuer à ajouter des plateformes tant que nécessaire. Utilisez
-    # choose_platform_type(...) avec les probabilités indiquées dans le README.
+    # 1. Si la liste est vide, on ne peut pas trouver la plateforme la plus haute
+    if not PLATFORMS:
+        return
+
+    # 2. On trouve la plateforme la plus haute (celle qui a la plus petite valeur Y)
+    highest_platform = min(PLATFORMS, key=lambda p: p["y"])
+
+    # 3. Tant que la plateforme la plus haute est visible (en dessous du haut de l'écran)
+    current_y = highest_platform["y"]
+    while current_y > 0:
+        # On calcule un espacement vertical aléatoire entre les limites configurées
+        gap = random.randint(MIN_PLATFORM_GAP, MAX_PLATFORM_GAP)
+        current_y -= gap
+
+        # Sélection du type de plateforme selon les probabilités demandées (55% verte, 20% bleue, 13% ressort)
+        p_type = choose_platform_type(0.55, 0.20, 0.13)
+
+        # Position X aléatoire pour la nouvelle plateforme
+        x = random.randint(0, SCREEN_WIDTH - PLATFORM_WIDTH)
+
+        # Création et ajout de la nouvelle plateforme
+        new_plat = create_platform(x, current_y, p_type)
+        PLATFORMS.append(new_plat)
 
     return
 

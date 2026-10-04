@@ -1,7 +1,6 @@
 # ======================== config.py ========================
 
 import os
-UFWIFHWIUEFUIW
 
 # Chemin absolu du dossier du projet et du dossier d'assets
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
